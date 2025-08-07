@@ -1,7 +1,9 @@
 local HttpService = game:GetService("HttpService")
 local userKey = "DELTA777"
 
-local result = game:HttpGet("https://7b37b730-e2fb-40a9-9d37-fd10e405ad50-00-1ef12hp3tzr3h.kirk.replit.dev/check?key=" .. userKey)
+local result = HttpService:GetAsync(
+    "https://7b37b730-e2fb-40a9-9d37-fd10e405ad50-00-1ef12hp3tzr3h.kirk.replit.dev/check?key=" .. userKey
+)
 
 if result == "VALID" then
     local player = game.Players.LocalPlayer

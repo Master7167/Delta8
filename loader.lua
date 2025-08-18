@@ -1,65 +1,48 @@
 -- RobustLoader.lua
+-- Loader die eerst een key check uitvoert via Replit, daarna je script van GitHub laadt.
+
 local HttpService = game:GetService("HttpService")
 
-local URLS = {
-    "https://raw.githubusercontent.com/indexeduu/BF-NewVer/main/V3New.lua", -- juiste raw
-    "https://418024f4-b9de-4bba-bece-77d32f5a843a-00-ahhy1q03e8ly.worf.replit.dev/", -- jouw Replit
-}
+-- Zet hier je key en Replit URL
+local KEY = "DELTA777"
+local KEY_CHECK_URL = "https://<jouw-replit-url>/?key=" .. KEY
 
-local function httpFetch(url)
-    -- Probeer executors (game:HttpGet), dan Studio (HttpService:GetAsync)
+-- Script dat je wilt laden vanaf GitHub
+local SCRIPT_URL = "https://raw.githubusercontent.com/VapeVoidware/VW-Add/main/nightsintheforest.lua"
+
+-- Functie om HTTP requests te doen
+local function httpGet(url)
     local ok, res = pcall(function()
-        if typeof(game.HttpGet) == "function" then
-            return game:HttpGet(url, true)
-        else
-            return HttpService:GetAsync(url, true)
-        end
+        return game:HttpGet(url, true)
     end)
     if ok then return res end
     return nil, res
 end
 
-local function looksLikeHTML(s)
-    if not s then return false end
-    local h = s:sub(1, 200):lower()
-    return h:find("<!doctype", 1, true) or h:find("<html", 1, true)
+-- Stap 1: Key check via Replit
+local body, err = httpGet(KEY_CHECK_URL)
+if not body then
+    warn("[Loader] ❌ Kon Replit niet bereiken: " .. tostring(err))
+    return
 end
 
-local function tryLoadFrom(url)
-    print("[Loader] Fetch: " .. url)
-    local body, err = httpFetch(url)
-    if not body then
-        warn("[Loader] HTTP-fout: " .. tostring(err))
-        return false
-    end
-    if looksLikeHTML(body) then
-        warn("[Loader] Server gaf HTML (waarschijnlijk error/redirect). Snippet:\n" .. body:sub(1, 200))
-        return false
-    end
-    local fn, compErr = loadstring(body)
-    if not fn then
-        warn("[Loader] Compile error:\n" .. tostring(compErr) .. "\nSnippet:\n" .. body:sub(1, 200))
-        return false
-    end
-    local ok, runErr = pcall(fn)
-    if not ok then
-        warn("[Loader] Runtime error: " .. tostring(runErr))
-        return false
-    end
-    print("[Loader] ✅ Succesvol geladen van: " .. url)
-    return true
+local data = nil
+pcall(function() data = HttpService:JSONDecode(body) end)
+
+if not data or data.status ~= "ok" then
+    warn("[Loader] ❌ Ongeldige key of verificatie mislukt.")
+    return
 end
 
-local loaded = false
-for _, u in ipairs(URLS) do
-    if tryLoadFrom(u) then
-        loaded = true
-        break
-    end
-end
+print("[Loader] ✅ Key geverifieerd, laad script...")
 
-if not loaded then
-    warn("[Loader] ❌ Kon geen enkele bron laden.")
-    warn("[Hints] - Gebruik de GitHub raw-link (zoals hierboven).")
-    warn("[Hints] - In Studio: zet 'Allow HTTP Requests' AAN en 'LoadStringEnabled' AAN.")
+-- Stap 2: Script laden vanaf GitHub
+local success, result = pcall(function()
+    return loadstring(game:HttpGet(SCRIPT_URL, true))()
+end)
+
+if success then
+    print("[Loader] ✅ Script succesvol geladen.")
+else
+    warn("[Loader] ❌ Fout bij laden: " .. tostring(result))
 end

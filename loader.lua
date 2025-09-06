@@ -1,28 +1,3 @@
-from flask import Flask, Response
-import os
-
-app = Flask(__name__)
-
-# Lua-script voor de initiële loader
-loader_script = """
--- Simpele Roblox loader voor het hoofdscript
-print("🚀 Initializing loader...")
-
--- Laad het hoofdscript vanaf de Replit-server
-local success, result = pcall(function()
-    return loadstring(game:HttpGet("https://<jouw-project>.replit.app/main.lua", true))()
-end)
-
--- Controleer of het laden succesvol was
-if success then
-    print("✅ Main script loaded successfully!")
-else
-    warn("❌ Failed to load main script: " .. tostring(result))
-end
-"""
-
-# Hoofd Lua-script (het GitHub-script dat je hebt gedeeld)
-main_script = """
 -- 🔑 Loader met Key System (Key = DELTA777)
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
@@ -161,33 +136,7 @@ end)
 
 -- 🌌 Voidware script loader
 voidBtn.MouseButton1Click:Connect(function()
-    loadstring(game:HttpGet("https://<jouw-project>.replit.app/nightsintheforest.lua", true))()
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/VapeVoidware/VW-Add/main/nightsintheforest.lua", true))()
 end)
 
 print("✅ Loader geladen (Key = DELTA777)")
-"""
-
-# Route om de initiële loader te serveren
-@app.route('/loader.lua')
-def serve_loader():
-    return Response(loader_script, mimetype='text/plain')
-
-# Route om het hoofdscript te serveren
-@app.route('/main.lua')
-def serve_main():
-    return Response(main_script, mimetype='text/plain')
-
-# Route voor het andere script dat wordt geladen via HttpGet
-@app.route('/nightsintheforest.lua')
-def serve_nightsintheforest():
-    # Placeholder voor nightsintheforest.lua
-    placeholder_script = """
-    -- Placeholder voor nightsintheforest.lua
-    print("🌌 Voidware script geladen!")
-    -- Voeg hier je eigen script logica toe
-    """
-    return Response(placeholder_script, mimetype='text/plain')
-
-# Start de Flask server
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=8080)

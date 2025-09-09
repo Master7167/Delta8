@@ -1,48 +1,36 @@
 -- Roblox loader met key system
 local correctKey = "DELTA777"
 
--- Functie om key input veilig te vragen
-local function getUserKey()
-    local player = game:GetService("Players").LocalPlayer
-    if not player then
-        warn("Kan de speler niet vinden. Script kan niet draaien.")
-        return nil
-    end
-
-    -- PromptInput werkt alleen bij LocalPlayer in Roblox
-    local success, input = pcall(function()
-        return player:PromptInput("Voer je key in:", "")
-    end)
-
-    if success then
-        return tostring(input)
-    else
-        warn("Kon key input niet ophalen:", input)
-        return nil
-    end
+-- Vraag de speler om key
+local Players = game:GetService("Players")
+local player = Players.LocalPlayer
+if not player then
+    warn("LocalPlayer niet gevonden. Script kan niet draaien.")
+    return
 end
 
--- Verkrijg de key van de gebruiker
-local userKey = getUserKey()
+local success, input = pcall(function()
+    return player:PromptInput("Voer je key in:", "")
+end)
 
-if userKey == correctKey then
-    print("Key geaccepteerd! Script wordt geladen...")
+if not success or not input then
+    warn("Kon key input niet ophalen.")
+    return
+end
 
-    -- URL van het externe script
+-- Controleer key
+if input == correctKey then
+    print("Key correct! Script wordt geladen...")
+
+    -- Laad extern script van GitHub
     local url = "https://raw.githubusercontent.com/VapeVoidware/VW-Add/main/nightsintheforest.lua"
-
-    -- Probeer het externe script te laden
-    local success, err = pcall(function()
-        local httpGet = game:HttpGet
-        if not httpGet then
-            error("HttpGet niet beschikbaar. Zorg dat je een exploit gebruikt die HttpGet ondersteunt.")
-        end
-        loadstring(httpGet(url, true))()
+    local loadSuccess, err = pcall(function()
+        loadstring(game:HttpGet(url, true))()
     end)
 
-    if not success then
+    if not loadSuccess then
         warn("Fout bij laden van extern script:", err)
     end
 else
-    warn("Ongeldige key! Je kunt dit script niet gebruiken.")
+    warn("Ongeldige key!")
 end

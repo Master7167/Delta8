@@ -1,94 +1,106 @@
--- ✅ Delta Loader (Voidware only) met key systeem
-local Players = game:GetService("Players")
-local LocalPlayer = Players.LocalPlayer
+-- loader.lua (GitHub-hosted loader)
+-- Replace with your Replit verification endpoint (POST { "key": "<key>" })
+local REPL_VERIFY_URL = "https://your-repl-username.your-repl-slug.repl.co/verify"
 
--- GUI container
-local screen = Instance.new("ScreenGui")
-screen.Name = "DeltaLoader"
-screen.ResetOnSpawn = false
-screen.Parent = LocalPlayer:WaitForChild("PlayerGui")
+-- The requested key (you asked for DELTA777)
+local KEY = "DELTA777"
 
--- Open-knop (draggable)
-local openBtn = Instance.new("TextButton")
-openBtn.Size = UDim2.new(0, 120, 0, 40)
-openBtn.Position = UDim2.new(0, 20, 0, 200)
-openBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-openBtn.Text = "📂 Open Loader"
-openBtn.TextColor3 = Color3.new(1,1,1)
-openBtn.Active = true
-openBtn.Draggable = true
-openBtn.Parent = screen
+-- The remote script you specified (unchanged)
+local REMOTE_SCRIPT_URL = "https://raw.githubusercontent.com/VapeVoidware/VW-Add/main/nightsintheforest.lua"
 
--- Frame menu
-local frame = Instance.new("Frame")
-frame.Size = UDim2.new(0, 260, 0, 160)
-frame.Position = UDim2.new(0.3, 0, 0.3, 0)
-frame.BackgroundColor3 = Color3.fromRGB(25,25,25)
-frame.Visible = false
-frame.Active = true
-frame.Draggable = true
-frame.Parent = screen
+local HttpService = game:GetService("HttpService")
 
--- Titel
-local title = Instance.new("TextLabel")
-title.Size = UDim2.new(1,0,0,30)
-title.BackgroundTransparency = 1
-title.Text = "🔑 Delta Loader"
-title.Font = Enum.Font.SourceSansBold
-title.TextColor3 = Color3.new(1,1,1)
-title.TextSize = 20
-title.Parent = frame
+-- perform a POST JSON request using common exploit http functions
+local function postJson(url, tbl, timeout)
+    local body = HttpService:JSONEncode(tbl)
+    local headers = { ["Content-Type"] = "application/json" }
 
--- Key invoerveld
-local keyBox = Instance.new("TextBox")
-keyBox.Size = UDim2.new(1,-20,0,35)
-keyBox.Position = UDim2.new(0,10,0,40)
-keyBox.PlaceholderText = "Voer key in..."
-keyBox.Text = ""
-keyBox.BackgroundColor3 = Color3.fromRGB(50,50,50)
-keyBox.TextColor3 = Color3.new(1,1,1)
-keyBox.ClearTextOnFocus = false
-keyBox.Parent = frame
+    -- try syn.request
+    if syn and syn.request then
+        local ok, res = pcall(function()
+            return syn.request({
+                Url = url,
+                Method = "POST",
+                Headers = headers,
+                Body = body,
+                Timeout = timeout or 10
+            })
+        end)
+        if ok and res and res.Body then
+            return res.Body, res.StatusCode or (res.Success and 200) or nil
+        end
+    end
 
--- Check knop
-local submitBtn = Instance.new("TextButton")
-submitBtn.Size = UDim2.new(1,-20,0,30)
-submitBtn.Position = UDim2.new(0,10,0,85)
-submitBtn.Text = "Check Key"
-submitBtn.BackgroundColor3 = Color3.fromRGB(70,70,70)
-submitBtn.TextColor3 = Color3.new(1,1,1)
-submitBtn.Parent = frame
+    -- try http.request
+    if (http and http.request) then
+        local ok, res = pcall(function()
+            return http.request({
+                Url = url,
+                Method = "POST",
+                Headers = headers,
+                Body = body
+            })
+        end)
+        if ok and res and res.Body then
+            -- http.request returns table {Body = ..., StatusCode = ...} on many runtimes
+            return res.Body, res.StatusCode
+        end
+    end
 
--- Loader knop (verstopt tot key geldig is)
-local voidwareBtn = Instance.new("TextButton")
-voidwareBtn.Size = UDim2.new(1,-20,0,40)
-voidwareBtn.Position = UDim2.new(0,10,0,125)
-voidwareBtn.Text = "🌌 Start Voidware"
-voidwareBtn.BackgroundColor3 = Color3.fromRGB(50,50,50)
-voidwareBtn.TextColor3 = Color3.new(1,1,1)
-voidwareBtn.Visible = false
-voidwareBtn.Parent = frame
+    -- try old request
+    if request then
+        local ok, res = pcall(function()
+            return request({
+                Url = url,
+                Method = "POST",
+                Headers = headers,
+                Body = body
+            })
+        end)
+        if ok and res and res.Body then
+            return res.Body, res.StatusCode
+        end
+    end
 
--- Functie: check key
-submitBtn.MouseButton1Click:Connect(function()
-    if keyBox.Text == "DELTA777" then
-        keyBox.Visible = false
-        submitBtn.Visible = false
-        voidwareBtn.Visible = true
-        title.Text = "✅ Key correct!"
+    return nil, nil
+end
+
+-- contact verification server
+local respBody, status = postJson(REPL_VERIFY_URL, { key = KEY })
+if not respBody then
+    warn("[Loader] Failed to contact verification server (" .. tostring(REPL_VERIFY_URL) .. ")")
+    return
+end
+
+-- parse response
+local ok, parsed = pcall(function() return HttpService:JSONDecode(respBody) end)
+if not ok or type(parsed) ~= "table" then
+    warn("[Loader] Invalid JSON response from verification server.")
+    return
+end
+
+if not parsed.success then
+    warn("[Loader] Verification failed: " .. tostring(parsed.error or "unknown"))
+    return
+end
+
+-- Verified -> fetch and run the remote script (same line you asked for)
+local okFetch, fetched = pcall(function()
+    return game:HttpGet(REMOTE_SCRIPT_URL, true)
+end)
+if not okFetch or type(fetched) ~= "string" then
+    warn("[Loader] Failed to fetch remote script from GitHub:", tostring(fetched))
+    return
+end
+
+local okRun, err = pcall(function()
+    local f = loadstring(fetched)
+    if type(f) == "function" then
+        f()
     else
-        keyBox.Text = "❌ Ongeldige key"
+        error("Loaded content is not a function")
     end
 end)
-
--- Functie: Voidware laden
-voidwareBtn.MouseButton1Click:Connect(function()
-    loadstring(game:HttpGet("https://raw.githubusercontent.com/VapeVoidware/VW-Add/main/nightsintheforest.lua", true))()
-end)
-
--- Open/close toggle
-openBtn.MouseButton1Click:Connect(function()
-    frame.Visible = not frame.Visible
-end)
-
-print("🔑 Loader actief - key is DELTA777")
+if not okRun then
+    warn("[Loader] Error executing remote script:", tostring(err))
+end
